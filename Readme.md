@@ -25,7 +25,13 @@ No PowerShell, na raiz do projeto:
 .\scripts\build.ps1
 ```
 
-Isso gera o executavel em bin/beacon.exe.
+Isso gera o executavel em bin/beacon.exe usando a versao moderna em free-form (src/beacon_modern.f90).
+
+Para compilar explicitamente a versao legada em fixed-form:
+
+```powershell
+.\scripts\build.ps1 -Flavor legacy
+```
 
 ## Execucao dos casos
 
@@ -63,6 +69,8 @@ Arquivos de referencia versionados:
 
 ## Notas
 
-- O include Fortran usado pelo solver esta em src/beacon_common.inc.
+- A versao moderna sem COMMON blocks esta em src/beacon_modern.f90, usando modulo de estado.
+- A versao original legada continua em src/beacon_becker.for com include src/beacon_common.inc.
 - As tabelas extraidas do livro permanecem em docs/benchmark_tables.md.
 - Scripts de reconstrucao OCR estao em scripts/ocr/.
+- O script scripts/modernize_source.ps1 regenera automaticamente src/beacon_modern.f90 a partir da versao legada.
