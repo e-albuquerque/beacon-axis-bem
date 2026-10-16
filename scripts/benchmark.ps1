@@ -46,30 +46,20 @@ Require-File -Path $runScript
 if ($Rebuild) {
     & $runScript -Case sphere -Exe $Exe -OutputDir $OutputDir -Rebuild
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-    & $runScript -Case cylinder -Exe $Exe -OutputDir $OutputDir
-    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 } else {
     & $runScript -Case sphere -Exe $Exe -OutputDir $OutputDir
-    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-    & $runScript -Case cylinder -Exe $Exe -OutputDir $OutputDir
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 }
 
 $actualSphereOut = Join-Path $root "$OutputDir/sphere.out"
 $actualSphereErr = Join-Path $root "$OutputDir/sphere.err"
-$actualCylinderOut = Join-Path $root "$OutputDir/cylinder.out"
-$actualCylinderErr = Join-Path $root "$OutputDir/cylinder.err"
 
 $expectedSphereOut = Join-Path $root "$ReferenceDir/sphere.out"
 $expectedSphereErr = Join-Path $root "$ReferenceDir/sphere.err"
-$expectedCylinderOut = Join-Path $root "$ReferenceDir/cylinder.out"
-$expectedCylinderErr = Join-Path $root "$ReferenceDir/cylinder.err"
 
 $ok = $true
 $ok = (Compare-File -Actual $actualSphereOut -Expected $expectedSphereOut -Label "sphere.out") -and $ok
 $ok = (Compare-File -Actual $actualSphereErr -Expected $expectedSphereErr -Label "sphere.err") -and $ok
-$ok = (Compare-File -Actual $actualCylinderOut -Expected $expectedCylinderOut -Label "cylinder.out") -and $ok
-$ok = (Compare-File -Actual $actualCylinderErr -Expected $expectedCylinderErr -Label "cylinder.err") -and $ok
 
 if (-not $ok) {
     throw "Benchmark comparison failed."

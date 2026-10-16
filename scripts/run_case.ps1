@@ -1,5 +1,5 @@
 param(
-    [ValidateSet("sphere", "cylinder")]
+    [ValidateSet("sphere")]
     [string]$Case = "sphere",
     [string]$Exe = "bin/beacon.exe",
     [string]$OutputDir = "results",

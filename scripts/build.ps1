@@ -1,7 +1,5 @@
 param(
     [string]$Output = "bin/beacon.exe",
-    [ValidateSet("modern", "legacy")]
-    [string]$Flavor = "modern",
     [switch]$Debug,
     [switch]$NoOptimize
 )
@@ -37,14 +35,8 @@ if ($Debug) {
 
 $srcFile = ""
 $incDir = Join-Path $root "src"
-
-if ($Flavor -eq "modern") {
-    $srcFile = Join-Path $root "src\beacon_modern.f90"
-    $flags += @("-ffree-form", "-ffree-line-length-none")
-} else {
-    $srcFile = Join-Path $root "src\beacon_becker.for"
-    $flags += @("-ffixed-form", "-ffixed-line-length-none")
-}
+$srcFile = Join-Path $root "src\beacon_modern.f90"
+$flags += @("-ffree-form", "-ffree-line-length-none")
 
 if (-not (Test-Path $srcFile)) {
     throw "Source file not found: $srcFile"
@@ -52,7 +44,6 @@ if (-not (Test-Path $srcFile)) {
 
 Write-Host "Using compiler: $gfortran"
 Write-Host "Output: $outputPath"
-Write-Host "Flavor: $Flavor"
 Write-Host "Source: $srcFile"
 
 & $gfortran @flags $srcFile "-I$incDir" "-o" $outputPath
