@@ -1,7 +1,7 @@
 param(
     [ValidateSet("sphere")]
     [string]$Case = "sphere",
-    [string]$Exe = "bin/beacon.exe",
+    [string]$Exe = "",
     [string]$OutputDir = "results",
     [switch]$Rebuild
 )
@@ -9,14 +9,41 @@ param(
 $root = Split-Path -Parent $PSScriptRoot
 Set-Location $root
 
-$exePath = if ([System.IO.Path]::IsPathRooted($Exe)) { $Exe } else { Join-Path $root $Exe }
-if ($Rebuild -or -not (Test-Path $exePath)) {
-    & (Join-Path $PSScriptRoot "build.ps1") -Output $Exe
+if ([string]::IsNullOrWhiteSpace($Exe)) {
+    if ($env:OS -eq "Windows_NT") {
+        $Exe = "bin/beacon.exe"
+    } else {
+        $Exe = "bin/beacon"
+    }
 }
-if (-not (Test-Path $exePath)) {
+
+$exePath = if ([System.IO.Path]::IsPathRooted($Exe)) { $Exe } else { Join-Path $root $Exe }
+$altExePath = if ($exePath.EndsWith(".exe")) { $exePath.Substring(0, $exePath.Length - 4) } else { "$exePath.exe" }
+
+if (Test-Path $exePath) {
+    $resolvedExePath = $exePath
+} elseif (Test-Path $altExePath) {
+    $resolvedExePath = $altExePath
+} else {
+    $resolvedExePath = $null
+}
+
+if ($Rebuild -or -not $resolvedExePath) {
+    & (Join-Path $PSScriptRoot "build.ps1") -Output $Exe
+    if ($LASTEXITCODE -ne 0) {
+        throw "Build failed with exit code $LASTEXITCODE"
+    }
+}
+
+if (Test-Path $exePath) {
+    $resolvedExePath = $exePath
+} elseif (Test-Path $altExePath) {
+    $resolvedExePath = $altExePath
+}
+if (-not $resolvedExePath) {
     throw "Executable not found at: $exePath"
 }
-$exeFull = (Resolve-Path $exePath).Path
+$exeFull = (Resolve-Path $resolvedExePath).Path
 
 $dataFile = Join-Path $root "data\$Case.dat"
 if (-not (Test-Path $dataFile)) {

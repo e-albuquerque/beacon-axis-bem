@@ -1,11 +1,19 @@
 param(
-    [string]$Output = "bin/beacon.exe",
+    [string]$Output = "",
     [switch]$Debug,
     [switch]$NoOptimize
 )
 
 $root = Split-Path -Parent $PSScriptRoot
 Set-Location $root
+
+if ([string]::IsNullOrWhiteSpace($Output)) {
+    if ($env:OS -eq "Windows_NT") {
+        $Output = "bin/beacon.exe"
+    } else {
+        $Output = "bin/beacon"
+    }
+}
 
 $compilerCandidates = @()
 $cmd = Get-Command gfortran -ErrorAction SilentlyContinue
@@ -26,7 +34,7 @@ if (-not (Test-Path $outDir)) {
     New-Item -ItemType Directory -Path $outDir | Out-Null
 }
 
-$flags = @("-std=legacy", "-Wall")
+$flags = @("-std=legacy", "-Wall", "-fopenmp")
 if ($Debug) {
     $flags += @("-g", "-fcheck=all", "-fbacktrace")
 } elseif (-not $NoOptimize) {
@@ -37,6 +45,7 @@ $srcFile = ""
 $incDir = Join-Path $root "src"
 $srcFile = Join-Path $root "src\beacon_modern.f90"
 $flags += @("-ffree-form", "-ffree-line-length-none")
+$linkFlags = @("-fopenmp", "-llapack", "-lblas")
 
 if (-not (Test-Path $srcFile)) {
     throw "Source file not found: $srcFile"
@@ -46,7 +55,7 @@ Write-Host "Using compiler: $gfortran"
 Write-Host "Output: $outputPath"
 Write-Host "Source: $srcFile"
 
-& $gfortran @flags $srcFile "-I$incDir" "-o" $outputPath
+& $gfortran @flags $srcFile "-I$incDir" "-o" $outputPath @linkFlags
 if ($LASTEXITCODE -ne 0) {
     throw "Build failed with exit code $LASTEXITCODE."
 }

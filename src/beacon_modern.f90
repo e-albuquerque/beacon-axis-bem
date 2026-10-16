@@ -6,6 +6,17 @@ module beacon_state
   real :: a(400,401), u(400), x(100), y(100), xtrac(100,3), ytrac(100,3), ttrac(100,3), ptrac(100,3), b11(100,3), b12(100,3), b21(100,3), b22(100,3), angnor(100,3), presu(100,3), presxx(100,3), presyy(100,3), presxy(100,3), a11(200), a12(200), a21(200), a22(200), f11(200), f12(200), f21(200), f22(200), rhs1(200), rhs2(200), bn1(200), bn2(200), sigxx(200), sigxy(200), sigyy(200), sigzz(200), sig11(200), sig12(200), sig22(200), sig33(200), dispt(200), dispn(200), xint(200), yint(200), szzint(200), uxint(200), uyint(200), sxxint(200), sxyint(200), syyint(200), xg(6), cg(6), xgl(6), cgl(6), gfact(6), gshapf(6), guxx(6), guyx(6), guxy(6), guyy(6), gtxx(6), gtyx(6), gtxy(6), gtyy(6), cordx(3), cordy(3), shapf(3), zeta(3), shapd(3), aa1(5), bb1(5), cc1(5), dd1(5), pi, dmax, e, xnu, xmu, xp, xq, yp, yq, scalef, fn1, fn2, si, xnorm, ynorm, xjacob, uxx, uxy, uyx, uyy, txx, tyx, txy, tyy, s1xx, s2xx, s1xy, s2xy, s1yx, s2yx, s1yy, s2yy, d1xx, d2xx, d1xy, d2xy, d1yx, d2yx, d1yy, d2yy, am, ellipk, ellipe, uxxe, uxxk, uxye, uxyk, uyxe, uyxk, uyye, uyyk, txxe, txxk, txye, txyk, tyxe, tyxk, tyye, tyyk, te1, te2, te3, te4, te5, te6, te7, te8, tk1, tk2, tk3, tk4, tk5, tk6, tk7, tk8, duxxdr, duxxdz, duxydr, duxydz, duyxdr, duyxdz, duyydr, duyydz, dtxxdr, dtxxdz, dtxydr, dtxydz, dtyxdr, dtyxdz, dtyydr, dtyydz
 
   character(len=1) :: xtitl(80)
+!$omp threadprivate(norder,nodep,nodeq,ielemq,ilog,iself,&
+!$omp& b11,b12,b21,b22,a11,a12,a21,a22,f11,f12,f21,f22,&
+!$omp& gfact,gshapf,guxx,guyx,guxy,guyy,gtxx,gtyx,gtxy,gtyy,&
+!$omp& cordx,cordy,shapf,shapd,&
+!$omp& xp,xq,yp,yq,fn1,fn2,si,xnorm,ynorm,xjacob,&
+!$omp& uxx,uxy,uyx,uyy,txx,tyx,txy,tyy,am,ellipk,ellipe,&
+!$omp& uxxe,uxxk,uxye,uxyk,uyxe,uyxk,uyye,uyyk,&
+!$omp& txxe,txxk,txye,txyk,tyxe,tyxk,tyye,tyyk,&
+!$omp& te1,te2,te3,te4,te5,te6,te7,te8,tk1,tk2,tk3,tk4,tk5,tk6,tk7,tk8,&
+!$omp& duxxdr,duxxdz,duxydr,duxydz,duyxdr,duyxdz,duyydr,duyydz,&
+!$omp& dtxxdr,dtxxdz,dtxydr,dtxydz,dtyxdr,dtyxdz,dtyydr,dtyydz)
 end module beacon_state
 
 PROGRAM BEACON
@@ -346,7 +357,7 @@ END
 SUBROUTINE ASSEMB
   use beacon_state
   implicit none
-  integer :: i, ibc, ic, icol1, icol2, ielem, ii, irow1, irow2, jj, jmax, node
+  integer :: i, ibc, ic, icol1, icol2, ielem, ii, irow1, irow2, jj, jmax, node, nodep_idx
   real :: dist, h, relxp
 !--PURPOSE : TO ASSEMBLE THE A AND B MATRICES.
 NEQN=2*NNODES
@@ -389,7 +400,9 @@ BN2(NODE)=0.0
 1 END DO
 
 !--TAKE EACH NODE IN TURN AS THE LOAD POINT NODEP.
-DO NODEP=1,NNODES
+!$omp parallel do default(shared) private(i,ic,icol1,icol2,ielem,irow1,irow2,jmax,node,h,relxp,nodep_idx) schedule(dynamic)
+DO NODEP_IDX=1,NNODES
+NODEP=NODEP_IDX
 RELXP=0.0
 XP=X(NODEP)
 YP=Y(NODEP)
@@ -458,6 +471,7 @@ JMAX=NEQN+1
 A(IROW1,JMAX)=RHS1(NODEP)
 A(IROW2,JMAX)=RHS2(NODEP)
 2 END DO
+!$omp end parallel do
 
 RETURN
 END
@@ -467,6 +481,7 @@ SUBROUTINE BCAPPL
   use beacon_state
   implicit none
   integer :: ibc, ic, id, ielem, node
+  integer :: ncheck_local(200)
   real :: disp
 IF(NBCU.EQ.0)GO TO 7771
 
@@ -485,7 +500,7 @@ IF(ID.EQ.2)F22(NODE)=F22(NODE)-B22(IELEM,IC)*SCALEF
 1 END DO
 
 DO NODE=1,NNODES
-NCHECK(NODE)=0
+ncheck_local(NODE)=0
 3 END DO
 
 !--Move prescribed displacement terms to RHS and replace A by F.
@@ -496,7 +511,7 @@ CALL ARRAY3(IELEM)
 DO IC=1,3
 NODE=NORDER(IC)
 DISP=PRESU(IBC,IC)
-IF(NCHECK(NODE).EQ.ID)GO TO 5
+IF(ncheck_local(NODE).EQ.ID)GO TO 5
 
 IF(ID.EQ.1)RHS1(NODEP)=RHS1(NODEP)-A11(NODE)*DISP
 IF(ID.EQ.1)RHS2(NODEP)=RHS2(NODEP)-A21(NODE)*DISP
@@ -507,7 +522,7 @@ IF(ID.EQ.1)A11(NODE)=F11(NODE)
 IF(ID.EQ.1)A21(NODE)=F21(NODE)
 IF(ID.EQ.2)A12(NODE)=F12(NODE)
 IF(ID.EQ.2)A22(NODE)=F22(NODE)
-NCHECK(NODE)=ID
+ncheck_local(NODE)=ID
 5 END DO
 4 END DO
 
@@ -921,58 +936,30 @@ END
 SUBROUTINE SOLVER
   use beacon_state
   implicit none
-  integer :: i, icol, ieqn, imax, imin, ip1, irow, j, jmax, l
-  real :: aa, amean, fact, sum
-!--PURPOSE : SOLVE SIMULTANEOUS LINEAR EQUATIONS USING
-!--GAUSSIAN ELIMINATION WITH PARTIAL PIVOTING.
-AMEAN=0.0
-DO IROW=1,NEQN
-DO ICOL=1,NEQN
-AMEAN=AMEAN+ABS(A(IROW,ICOL))
-2 END DO
-1 END DO
-AMEAN=AMEAN/FLOAT(NEQN*NEQN)
-
+  interface
+    subroutine sgesv(n, nrhs, a, lda, ipiv, b, ldb, info)
+      integer :: n, nrhs, lda, ldb, info
+      integer :: ipiv(*)
+      real :: a(lda,*), b(ldb,*)
+    end subroutine sgesv
+  end interface
+  integer :: info, jmax
+  integer :: ipiv(400)
+  real :: rhs(400,1)
+!--PURPOSE : SOLVE SIMULTANEOUS LINEAR EQUATIONS USING LAPACK SGESV
+!--(LU FACTORISATION WITH PARTIAL PIVOTING).
 JMAX=NEQN+1
-DO IEQN=1,NEQN-1
-IMIN=IEQN+1
-IMAX=IEQN
-DO I=IMIN,NEQN
-IF(ABS(A(I,IEQN)).GT.ABS(A(IMAX,IEQN)))IMAX=I
-4 END DO
+RHS(1:NEQN,1)=A(1:NEQN,JMAX)
 
-IF(IMAX.NE.IEQN)THEN
-DO J=IEQN,JMAX
-AA=A(IEQN,J)
-A(IEQN,J)=A(IMAX,J)
-A(IMAX,J)=AA
-6 END DO
+CALL SGESV(NEQN,1,A,400,IPIV,RHS,400,INFO)
+
+IF(INFO.EQ.0)THEN
+U(1:NEQN)=RHS(1:NEQN,1)
+RETURN
 ENDIF
 
-IF(ABS(A(IEQN,IEQN)/AMEAN).LT.1.E-8)GO TO 99
-DO I=IMIN,NEQN
-FACT=A(I,IEQN)/A(IEQN,IEQN)
-DO J=IMIN,JMAX
-A(I,J)=A(I,J)-FACT*A(IEQN,J)
-8 END DO
-7 END DO
-3 END DO
-
-IF(ABS(A(NEQN,NEQN)/AMEAN).LT.1.E-8)GO TO 99
-U(NEQN)=A(NEQN,JMAX)/A(NEQN,NEQN)
-DO L=2,NEQN
-I=NEQN+1-L
-SUM=A(I,JMAX)
-IP1=I+1
-DO J=IP1,NEQN
-SUM=SUM-A(I,J)*U(J)
-10 END DO
-U(I)=SUM/A(I,I)
-9 END DO
-RETURN
-
-99 WRITE(6,61)
-61 FORMAT(//78(1H*)//2X,'** ERROR **'/2X,'THE SOLUTION MATRIX HAS A ZERO DETERMINANT'/2X,'THE EQUATIONS CANNOT BE SOLVED'/2X,'** PROGRAM HALTED **'//78(1H*)//)
+WRITE(6,61)INFO
+61 FORMAT(//78(1H*)//2X,'** ERROR **'/2X,'LAPACK SGESV FAILED. INFO =',I8/2X,'THE EQUATIONS CANNOT BE SOLVED'/2X,'** PROGRAM HALTED **'//78(1H*)//)
 STOP
 END
 !--
