@@ -1,9 +1,12 @@
 module beacon_state
   implicit none
 
-  integer :: norder(100), node1(100), node2(100), node3(100), istors(100), istoru(100), idirec(100), ncheck(200), igeom, nodep, nodeq, ielemq, maxele, maxnod, maxint, nelems, neqn, nnodes, ngauss, ninpts, nbcs, nbcu, ilog, iself
+  integer :: norder(3), igeom, nodep, nodeq, ielemq, maxele, maxnod, maxint, nelems, neqn, nnodes, ngauss, ninpts, nbcs, nbcu, ilog, iself
+  integer, allocatable :: node1(:), node2(:), node3(:), istors(:), istoru(:), idirec(:), ncheck(:)
 
-  real :: a(400,401), u(400), x(100), y(100), xtrac(100,3), ytrac(100,3), ttrac(100,3), ptrac(100,3), b11(100,3), b12(100,3), b21(100,3), b22(100,3), angnor(100,3), presu(100,3), presxx(100,3), presyy(100,3), presxy(100,3), a11(200), a12(200), a21(200), a22(200), f11(200), f12(200), f21(200), f22(200), rhs1(200), rhs2(200), bn1(200), bn2(200), sigxx(200), sigxy(200), sigyy(200), sigzz(200), sig11(200), sig12(200), sig22(200), sig33(200), dispt(200), dispn(200), xint(200), yint(200), szzint(200), uxint(200), uyint(200), sxxint(200), sxyint(200), syyint(200), xg(6), cg(6), xgl(6), cgl(6), gfact(6), gshapf(6), guxx(6), guyx(6), guxy(6), guyy(6), gtxx(6), gtyx(6), gtxy(6), gtyy(6), cordx(3), cordy(3), shapf(3), zeta(3), shapd(3), aa1(5), bb1(5), cc1(5), dd1(5), pi, dmax, e, xnu, xmu, xp, xq, yp, yq, scalef, fn1, fn2, si, xnorm, ynorm, xjacob, uxx, uxy, uyx, uyy, txx, tyx, txy, tyy, s1xx, s2xx, s1xy, s2xy, s1yx, s2yx, s1yy, s2yy, d1xx, d2xx, d1xy, d2xy, d1yx, d2yx, d1yy, d2yy, am, ellipk, ellipe, uxxe, uxxk, uxye, uxyk, uyxe, uyxk, uyye, uyyk, txxe, txxk, txye, txyk, tyxe, tyxk, tyye, tyyk, te1, te2, te3, te4, te5, te6, te7, te8, tk1, tk2, tk3, tk4, tk5, tk6, tk7, tk8, duxxdr, duxxdz, duxydr, duxydz, duyxdr, duyxdz, duyydr, duyydz, dtxxdr, dtxxdz, dtxydr, dtxydz, dtyxdr, dtyxdz, dtyydr, dtyydz
+  real, allocatable :: a(:,:), u(:), x(:), y(:), xtrac(:,:), ytrac(:,:), ttrac(:,:), ptrac(:,:), b11(:,:), b12(:,:), b21(:,:), b22(:,:), angnor(:,:), presu(:,:), presxx(:,:), presyy(:,:), presxy(:,:), a11(:), a12(:), a21(:), a22(:), f11(:), f12(:), f21(:), f22(:), rhs1(:), rhs2(:), bn1(:), bn2(:), sigxx(:), sigxy(:), sigyy(:), sigzz(:), sig11(:), sig12(:), sig22(:), sig33(:), dispt(:), dispn(:), xint(:), yint(:), szzint(:), uxint(:), uyint(:), sxxint(:), sxyint(:), syyint(:)
+
+  real :: xg(6), cg(6), xgl(6), cgl(6), gfact(6), gshapf(6), guxx(6), guyx(6), guxy(6), guyy(6), gtxx(6), gtyx(6), gtxy(6), gtyy(6), cordx(3), cordy(3), shapf(3), zeta(3), shapd(3), aa1(5), bb1(5), cc1(5), dd1(5), pi, dmax, e, xnu, xmu, xp, xq, yp, yq, scalef, fn1, fn2, si, xnorm, ynorm, xjacob, uxx, uxy, uyx, uyy, txx, tyx, txy, tyy, s1xx, s2xx, s1xy, s2xy, s1yx, s2yx, s1yy, s2yy, d1xx, d2xx, d1xy, d2xy, d1yx, d2yx, d1yy, d2yy, am, ellipk, ellipe, uxxe, uxxk, uxye, uxyk, uyxe, uyxk, uyye, uyyk, txxe, txxk, txye, txyk, tyxe, tyxk, tyye, tyyk, te1, te2, te3, te4, te5, te6, te7, te8, tk1, tk2, tk3, tk4, tk5, tk6, tk7, tk8, duxxdr, duxxdz, duxydr, duxydz, duyxdr, duyxdz, duyydr, duyydz, dtxxdr, dtxxdz, dtxydr, dtxydz, dtyxdr, dtyxdz, dtyydr, dtyydz
 
   character(len=1) :: xtitl(80)
 !$omp threadprivate(norder,nodep,nodeq,ielemq,ilog,iself,&
@@ -17,6 +20,149 @@ module beacon_state
 !$omp& te1,te2,te3,te4,te5,te6,te7,te8,tk1,tk2,tk3,tk4,tk5,tk6,tk7,tk8,&
 !$omp& duxxdr,duxxdz,duxydr,duxydz,duyxdr,duyxdz,duyydr,duyydz,&
 !$omp& dtxxdr,dtxxdz,dtxydr,dtxydz,dtyxdr,dtyxdz,dtyydr,dtyydz)
+contains
+SUBROUTINE ALLOCATE_SHARED_STATE(MAXELE_IN,MAXNOD_IN,MAXINT_IN)
+  implicit none
+  integer, intent(in) :: maxele_in, maxnod_in, maxint_in
+  integer :: neqn_cap
+
+  MAXELE=maxele_in
+  MAXNOD=maxnod_in
+  MAXINT=maxint_in
+  NEQN_CAP=2*MAXNOD
+
+  CALL DEALLOCATE_SHARED_STATE
+
+  ALLOCATE(NODE1(MAXELE),NODE2(MAXELE),NODE3(MAXELE))
+  ALLOCATE(ISTORS(MAXELE),ISTORU(MAXELE),IDIREC(MAXELE))
+  ALLOCATE(NCHECK(MAXNOD))
+  ALLOCATE(A(NEQN_CAP,NEQN_CAP+1),U(NEQN_CAP))
+  ALLOCATE(X(MAXNOD),Y(MAXNOD))
+  ALLOCATE(XTRAC(MAXELE,3),YTRAC(MAXELE,3),TTRAC(MAXELE,3),PTRAC(MAXELE,3))
+  ALLOCATE(ANGNOR(MAXELE,3),PRESU(MAXELE,3),PRESXX(MAXELE,3),PRESYY(MAXELE,3),PRESXY(MAXELE,3))
+  ALLOCATE(RHS1(MAXNOD),RHS2(MAXNOD),BN1(MAXNOD),BN2(MAXNOD))
+  ALLOCATE(SIGXX(MAXNOD),SIGXY(MAXNOD),SIGYY(MAXNOD),SIGZZ(MAXNOD))
+  ALLOCATE(SIG11(MAXNOD),SIG12(MAXNOD),SIG22(MAXNOD),SIG33(MAXNOD))
+  ALLOCATE(DISPT(MAXNOD),DISPN(MAXNOD))
+  ALLOCATE(XINT(MAXINT),YINT(MAXINT),SZZINT(MAXINT),UXINT(MAXINT),UYINT(MAXINT),SXXINT(MAXINT),SXYINT(MAXINT),SYYINT(MAXINT))
+
+  NODE1=0
+  NODE2=0
+  NODE3=0
+  ISTORS=0
+  ISTORU=0
+  IDIREC=0
+  NCHECK=0
+
+  A=0.0
+  U=0.0
+  X=0.0
+  Y=0.0
+  XTRAC=0.0
+  YTRAC=0.0
+  TTRAC=0.0
+  PTRAC=0.0
+  ANGNOR=0.0
+  PRESU=0.0
+  PRESXX=0.0
+  PRESYY=0.0
+  PRESXY=0.0
+  RHS1=0.0
+  RHS2=0.0
+  BN1=0.0
+  BN2=0.0
+  SIGXX=0.0
+  SIGXY=0.0
+  SIGYY=0.0
+  SIGZZ=0.0
+  SIG11=0.0
+  SIG12=0.0
+  SIG22=0.0
+  SIG33=0.0
+  DISPT=0.0
+  DISPN=0.0
+  XINT=0.0
+  YINT=0.0
+  SZZINT=0.0
+  UXINT=0.0
+  UYINT=0.0
+  SXXINT=0.0
+  SXYINT=0.0
+  SYYINT=0.0
+END
+
+SUBROUTINE ALLOCATE_THREAD_STATE
+  implicit none
+
+  IF(.NOT.ALLOCATED(B11))THEN
+    ALLOCATE(B11(MAXELE,3),B12(MAXELE,3),B21(MAXELE,3),B22(MAXELE,3))
+  ENDIF
+
+  IF(.NOT.ALLOCATED(A11))THEN
+    ALLOCATE(A11(MAXNOD),A12(MAXNOD),A21(MAXNOD),A22(MAXNOD))
+    ALLOCATE(F11(MAXNOD),F12(MAXNOD),F21(MAXNOD),F22(MAXNOD))
+  ENDIF
+
+  B11=0.0
+  B12=0.0
+  B21=0.0
+  B22=0.0
+  A11=0.0
+  A12=0.0
+  A21=0.0
+  A22=0.0
+  F11=0.0
+  F12=0.0
+  F21=0.0
+  F22=0.0
+END
+
+SUBROUTINE DEALLOCATE_SHARED_STATE
+  implicit none
+
+  IF(ALLOCATED(NODE1))DEALLOCATE(NODE1)
+  IF(ALLOCATED(NODE2))DEALLOCATE(NODE2)
+  IF(ALLOCATED(NODE3))DEALLOCATE(NODE3)
+  IF(ALLOCATED(ISTORS))DEALLOCATE(ISTORS)
+  IF(ALLOCATED(ISTORU))DEALLOCATE(ISTORU)
+  IF(ALLOCATED(IDIREC))DEALLOCATE(IDIREC)
+  IF(ALLOCATED(NCHECK))DEALLOCATE(NCHECK)
+  IF(ALLOCATED(A))DEALLOCATE(A)
+  IF(ALLOCATED(U))DEALLOCATE(U)
+  IF(ALLOCATED(X))DEALLOCATE(X)
+  IF(ALLOCATED(Y))DEALLOCATE(Y)
+  IF(ALLOCATED(XTRAC))DEALLOCATE(XTRAC)
+  IF(ALLOCATED(YTRAC))DEALLOCATE(YTRAC)
+  IF(ALLOCATED(TTRAC))DEALLOCATE(TTRAC)
+  IF(ALLOCATED(PTRAC))DEALLOCATE(PTRAC)
+  IF(ALLOCATED(ANGNOR))DEALLOCATE(ANGNOR)
+  IF(ALLOCATED(PRESU))DEALLOCATE(PRESU)
+  IF(ALLOCATED(PRESXX))DEALLOCATE(PRESXX)
+  IF(ALLOCATED(PRESYY))DEALLOCATE(PRESYY)
+  IF(ALLOCATED(PRESXY))DEALLOCATE(PRESXY)
+  IF(ALLOCATED(RHS1))DEALLOCATE(RHS1)
+  IF(ALLOCATED(RHS2))DEALLOCATE(RHS2)
+  IF(ALLOCATED(BN1))DEALLOCATE(BN1)
+  IF(ALLOCATED(BN2))DEALLOCATE(BN2)
+  IF(ALLOCATED(SIGXX))DEALLOCATE(SIGXX)
+  IF(ALLOCATED(SIGXY))DEALLOCATE(SIGXY)
+  IF(ALLOCATED(SIGYY))DEALLOCATE(SIGYY)
+  IF(ALLOCATED(SIGZZ))DEALLOCATE(SIGZZ)
+  IF(ALLOCATED(SIG11))DEALLOCATE(SIG11)
+  IF(ALLOCATED(SIG12))DEALLOCATE(SIG12)
+  IF(ALLOCATED(SIG22))DEALLOCATE(SIG22)
+  IF(ALLOCATED(SIG33))DEALLOCATE(SIG33)
+  IF(ALLOCATED(DISPT))DEALLOCATE(DISPT)
+  IF(ALLOCATED(DISPN))DEALLOCATE(DISPN)
+  IF(ALLOCATED(XINT))DEALLOCATE(XINT)
+  IF(ALLOCATED(YINT))DEALLOCATE(YINT)
+  IF(ALLOCATED(SZZINT))DEALLOCATE(SZZINT)
+  IF(ALLOCATED(UXINT))DEALLOCATE(UXINT)
+  IF(ALLOCATED(UYINT))DEALLOCATE(UYINT)
+  IF(ALLOCATED(SXXINT))DEALLOCATE(SXXINT)
+  IF(ALLOCATED(SXYINT))DEALLOCATE(SXYINT)
+  IF(ALLOCATED(SYYINT))DEALLOCATE(SYYINT)
+END
 end module beacon_state
 
 PROGRAM BEACON
@@ -26,6 +172,7 @@ PROGRAM BEACON
 MAXELE=100
 MAXNOD=2*MAXELE
 MAXINT=200
+CALL ALLOCATE_SHARED_STATE(MAXELE,MAXNOD,MAXINT)
 !--DEFINE PI.
 PI=4.0*ATAN(1.0)
 !--DEFINE THE LOCAL INTRINSIC COORDINATE PARAMETER (-1,0,+1).
@@ -59,6 +206,7 @@ CALL INTCAL
 
 WRITE(6,63)
 63 FORMAT(///,78(1H=)/10X,'COMPLETE PROGRAM RUN',/78(1H=)////)
+CALL DEALLOCATE_SHARED_STATE
 STOP
 END
 !
@@ -400,7 +548,9 @@ BN2(NODE)=0.0
 1 END DO
 
 !--TAKE EACH NODE IN TURN AS THE LOAD POINT NODEP.
-!$omp parallel do default(shared) private(i,ic,icol1,icol2,ielem,irow1,irow2,jmax,node,h,relxp,nodep_idx) schedule(dynamic)
+!$omp parallel default(shared) private(i,ic,icol1,icol2,ielem,irow1,irow2,jmax,node,h,relxp,nodep_idx)
+CALL ALLOCATE_THREAD_STATE
+!$omp do schedule(dynamic)
 DO NODEP_IDX=1,NNODES
 NODEP=NODEP_IDX
 RELXP=0.0
@@ -471,7 +621,8 @@ JMAX=NEQN+1
 A(IROW1,JMAX)=RHS1(NODEP)
 A(IROW2,JMAX)=RHS2(NODEP)
 2 END DO
-!$omp end parallel do
+!$omp end do
+!$omp end parallel
 
 RETURN
 END
@@ -481,7 +632,7 @@ SUBROUTINE BCAPPL
   use beacon_state
   implicit none
   integer :: ibc, ic, id, ielem, node
-  integer :: ncheck_local(200)
+  integer :: ncheck_local(nnodes)
   real :: disp
 IF(NBCU.EQ.0)GO TO 7771
 
@@ -944,20 +1095,23 @@ SUBROUTINE SOLVER
     end subroutine sgesv
   end interface
   integer :: info, jmax
-  integer :: ipiv(400)
-  real :: rhs(400,1)
+  integer, allocatable :: ipiv(:)
+  real, allocatable :: rhs(:,:)
 !--PURPOSE : SOLVE SIMULTANEOUS LINEAR EQUATIONS USING LAPACK SGESV
 !--(LU FACTORISATION WITH PARTIAL PIVOTING).
 JMAX=NEQN+1
+ALLOCATE(IPIV(NEQN),RHS(NEQN,1))
 RHS(1:NEQN,1)=A(1:NEQN,JMAX)
 
-CALL SGESV(NEQN,1,A,400,IPIV,RHS,400,INFO)
+CALL SGESV(NEQN,1,A,SIZE(A,1),IPIV,RHS,NEQN,INFO)
 
 IF(INFO.EQ.0)THEN
 U(1:NEQN)=RHS(1:NEQN,1)
+DEALLOCATE(IPIV,RHS)
 RETURN
 ENDIF
 
+DEALLOCATE(IPIV,RHS)
 WRITE(6,61)INFO
 61 FORMAT(//78(1H*)//2X,'** ERROR **'/2X,'LAPACK SGESV FAILED. INFO =',I8/2X,'THE EQUATIONS CANNOT BE SOLVED'/2X,'** PROGRAM HALTED **'//78(1H*)//)
 STOP

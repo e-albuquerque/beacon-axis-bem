@@ -1,33 +1,33 @@
 # BEM Axis (Fortran)
 
-Implementacao do codigo BEACON do livro do Becker em Fortran moderno, dedicada apenas a problemas axissimetrico-elasticos.
+This repository provides a modern Fortran reimplementation of the BEACON code described in Becker's text, restricted to axisymmetric linear elasticity analyses.
 
-## Escopo
+## Scope and Objectives
 
-- Formulação axissimetrica apenas.
-- Fluxo de build, execucao e benchmark para o caso da esfera.
-- Fonte principal em Fortran free-form e sem COMMON blocks.
-- Montagem das matrizes de influencia paralelizada com OpenMP.
-- Resolucao do sistema linear com rotina do LAPACK (SGESV).
+- Exclusive focus on axisymmetric formulation.
+- Reproducible workflow for compilation, execution, and verification using the sphere case.
+- Primary solver source in free-form Fortran with modular state handling and no COMMON blocks.
+- OpenMP-based parallel assembly of influence matrices.
+- Solution of the global linear system through LAPACK (SGESV).
 
-## Estrutura
+## Repository Organization
 
-- src/: codigo-fonte do solver
-- data/: arquivos de entrada
-- scripts/: automacao de build, execucao e benchmark
-- benchmarks/reference/: saidas de referencia para regressao
-- results/: saidas geradas localmente
-- docs/: material de apoio
-- archive/: historico de OCR e referencias
+- src/: numerical solver implementation
+- data/: input datasets
+- scripts/: automation for compilation, execution, and benchmarking
+- benchmarks/reference/: reference outputs for regression validation
+- results/: locally generated outputs
+- docs/: supplementary technical material
+- archive/: OCR processing history and reference artifacts
 
-## Pre-requisitos
+## Computational Prerequisites
 
-- gfortran com suporte a OpenMP
-- LAPACK e BLAS disponiveis para linkagem
-- GNU Make (Linux/macOS) ou mingw32-make (Windows)
-- Windows PowerShell (para os scripts .ps1)
+- gfortran with OpenMP support
+- LAPACK and BLAS available for linking
+- GNU Make (Linux/macOS) or mingw32-make (Windows)
+- Windows PowerShell (for .ps1 automation scripts)
 
-## Build
+## Compilation
 
 ### Linux/macOS
 
@@ -37,60 +37,72 @@ make
 
 ### Windows (MinGW/MSYS2)
 
-No Windows, use mingw32-make:
+On Windows platforms, use mingw32-make:
 
 ```powershell
 mingw32-make
 ```
 
-Para limpar os binarios antes de recompilar:
+If MSYS2 toolchain binaries are not available in PATH, run:
+
+```powershell
+$env:PATH = "C:\msys64\ucrt64\bin;" + $env:PATH
+```
+
+For a clean rebuild:
 
 ```powershell
 mingw32-make clean
 mingw32-make
 ```
 
-O executavel e gerado em bin/beacon (Linux/macOS) ou bin/beacon.exe (Windows).
+The executable artifact is generated as bin/beacon (Linux/macOS) or bin/beacon.exe (Windows).
 
-Opcionalmente, no PowerShell:
+Alternatively, from PowerShell:
 
 ```powershell
 .\scripts\build.ps1
 ```
 
-## Execucao
+## Execution
 
-Executar o caso axissimetrico da esfera:
+Execute the axisymmetric sphere case:
 
 ```powershell
 .\scripts\run_case.ps1 -Case sphere
 ```
 
-Saidas:
+Generated outputs:
 
 - results/sphere.out
 - results/sphere.err
 
-## Benchmark
+## Verification and Regression Benchmarking
 
-Executa o caso da esfera e compara com os arquivos de referencia versionados:
+The benchmarking workflow executes the sphere case and compares results against versioned reference files:
 
 ```powershell
 .\scripts\benchmark.ps1 -Rebuild
 ```
 
-Para reduzir falsos negativos entre ambientes com BLAS/LAPACK diferentes, o
-arquivo sphere.out e comparado com tolerancia numerica (parametros opcionais
--AbsTol e -RelTol).
+To reduce false negatives across environments with different BLAS/LAPACK implementations,
+sphere.out is compared using numerical tolerances (optional parameters -AbsTol and -RelTol).
 
-Referencias usadas:
+Reference artifacts:
 
 - benchmarks/reference/sphere.out
 - benchmarks/reference/sphere.err
 
-## Notas
+## Dynamic Memory Allocation Strategy
 
-- O solver moderno esta em src/beacon_modern.f90 e usa o modulo beacon_state.
-- O paralelismo com OpenMP e aplicado na etapa de montagem das matrizes de influencia.
-- O sistema linear global e resolvido com o solver SGESV da biblioteca LAPACK.
-- O projeto foi ajustado para foco exclusivo em formulacao axissimetrica.
+- Legacy fixed-size arrays were refactored into allocatable arrays in the solver state module.
+- Shared runtime arrays are provisioned by ALLOCATE_SHARED_STATE and released by DEALLOCATE_SHARED_STATE.
+- Thread-private OpenMP work arrays are provisioned per thread by ALLOCATE_THREAD_STATE.
+- SGESV uses runtime-consistent dimensions aligned with the allocated global matrix layout.
+
+## Implementation Notes
+
+- The modern solver is implemented in src/beacon_modern.f90 and organized around the beacon_state module.
+- OpenMP parallelization is applied in the influence-matrix assembly stage.
+- The global linear system is solved with LAPACK SGESV.
+- The repository scope is intentionally restricted to axisymmetric formulation.
