@@ -6,7 +6,8 @@ Projeto organizado para rodar os casos de benchmark do BEACON (esfera axissimetr
 
 - src/: codigo fonte principal
 - data/: entradas dos problemas
-- results/: saidas finais de referencia para uso humano
+- results/: saidas geradas nas execucoes locais
+- benchmarks/reference/: saidas de referencia para comparacao automatica
 - scripts/: scripts de build e execucao
 - docs/: tabelas e material de apoio
 - archive/: material historico (OCR, referencias)
@@ -44,6 +45,21 @@ Resultados sao salvos em:
 
 - results/sphere.out e results/sphere.err
 - results/cylinder.out e results/cylinder.err
+
+## Benchmark automatizado
+
+Executa os dois casos e compara os resultados com as saidas de referencia:
+
+```powershell
+.\scripts\benchmark.ps1 -Rebuild
+```
+
+Arquivos de referencia versionados:
+
+- benchmarks/reference/sphere.out
+- benchmarks/reference/sphere.err
+- benchmarks/reference/cylinder.out
+- benchmarks/reference/cylinder.err
 
 ## Notas
 

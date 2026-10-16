@@ -9,6 +9,11 @@ bin/
 .work/
 fort.7
 
+# Generated run outputs
+results/*.out
+results/*.err
+!results/.gitkeep
+
 # OS/editor
 .DS_Store
 Thumbs.db
